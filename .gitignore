@@ -1,0 +1,5 @@
+*.old
+error_log
+error_log;
+db-config.php
+.htaccess
