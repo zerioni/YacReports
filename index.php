@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <?php
 require_once "database.php";
-$itemcodes = explode(",",trim($_POST['itemcode']));
+require_once "Order.php";
+$itemcodes = explode(",", trim($_POST['itemcode'] ?? ''));
 $db = new DatabaseTransactions();
 ?>
 <html>
@@ -25,22 +26,45 @@ $db = new DatabaseTransactions();
     if(!empty($_POST['itemcode'])) {
         echo "<h2>Event Ticket Sales</h2><form action='index.php' method='post'><input type='hidden' name='itemcode' value='' /><input type='submit' value='New Search' /></form>";
     
-        $orders = $db->getOrders($_POST['itemcode']);  
+        $orders = new Order($_POST['itemcode']);
+        $orders = $orders->getOrderDetails();  
 
-        $total = array_sum(array_column($orders, 'order_product_quantity'));
-        $product_name = (isset($orders[0]['order_product_name'])) ? $orders[0]['order_product_name'] : 'Product';
+        $total = $orders['total'];
+        $product_name = $orders['product_name'];
 
         if(!empty($orders)){
     ?>
       
 
 <h4><?=$product_name?> | Ticket Total: <?=$total?></h4>
+<div id="page-info" style="display:none">
+    <?php print_r(json_encode($orders['orders'][0], true)); ?>
+    </div>
 <table><tbody>
     <tr><th style="text-align:left">Customer Name</th><th>Customer Email</th><th>Ticket Quantity</th><th style='padding-left:15px'>Ticket Price</th><th style='padding-left:15px'>Variant name</th></tr>
 <?php
    
-    foreach($orders as $order2) { 
-        echo "<tr><td style='min-width:250px'>".$order2['address_firstname'] . "&nbsp;" . $order2['address_lastname'] ."</td><td>".$order2['user_email']."</td><td>".$order2['order_product_quantity']."</td><td style='padding-left:15px'>".strstr($order2['order_product_price'], '.', true)."</td><td style='padding-left:15px'>".$order2['order_product_name']."</td></tr>";
+    foreach($orders['orders'] as $order) { 
+        echo "<tr>
+                <td style='min-width:250px'>".$order['address_firstname'] . "&nbsp;" . $order['address_lastname'] ."</td>
+                <td>".$order['user_email']."</td>
+                <td>".$order['order_product_quantity']."</td>
+                <td style='padding-left:15px'>".strstr($order['order_product_price'], '.', true)."</td>
+                <td style='padding-left:15px'>".$order['order_product_name']."</td>
+                </tr>";
+                if(isset($order['custom_fields']) && array_filter($order['custom_fields'])) {
+                    echo "<tr><td colspan='5'><strong>Custom Field Responses</strong><br />";
+                    foreach($order['custom_fields'] as $key => $value) {
+                        if(!empty($value)){
+                        echo $key . ": " . $value . "<br />";
+                        }
+                    }
+                    echo "<hr></td></tr>";
+                }
+                else {
+                    echo "<tr><td colspan='5'><hr></td></tr>";
+                }
+                
     } 
     ?>
     </tbody> </table>
